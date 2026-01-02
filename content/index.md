@@ -8,7 +8,7 @@ C#
 - [[Пул потоков]]
 
 Programming
-- [[Программирование/Csharp/Publish/SOLID|SOLID]]
+- [[SOLID]]
 
 Backend
 - [[REST API]]
