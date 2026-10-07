@@ -1,4 +1,3 @@
-
 C#
 - [[Различие ссылочных типов и типов значений]]
 - [[Интерфейс или Абстрактный класс]]
@@ -13,6 +12,8 @@ Programming
 Backend
 - [[REST API]]
 - [[Docker]]
+- [[HTTPS]]
+- [[gRPC и RPC]]
 
 ASP.Net
 - [[Middleware]]

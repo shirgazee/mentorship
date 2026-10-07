@@ -141,6 +141,24 @@ docker container run -d -name <> --mount type=volume,source=<source>,target=<tar
 Dockerfile - это иструкции, как собрать и запустить образ. Образ состоит из read-only слоев. Каждый слой - инструкция докерфайла, это дельта изменений от предыдущего слоя.
 .dockerignore - подобен .gitignore.
 
+Пример **DockerFile**
+
+```Docker
+# Set the base image as the .NET 6.0 SDK (this includes the runtime)
+FROM mcr.microsoft.com/dotnet/sdk:6.0 as build-env
+
+# Copy everything and publish the release (publish implicitly restores and builds)
+WORKDIR /app
+COPY . ./
+RUN dotnet publish ./Service/Service.csproj -c Release -o out --no-self-contained
+
+# Relayer the .NET SDK, anew with the build output
+FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine
+WORKDIR /app
+COPY --from=build-env /app/out .
+ENTRYPOINT [ "dotnet", "Service.dll" ]
+```
+
 
 **Сборка образа**:
 ```Shell
@@ -179,22 +197,50 @@ ARG <NAME>=<DEFAULT VALUE> в докерфайле
 VOLUME ["path1","path2"]
 
 **Entrypoint vs. Command**
-Entrypoint - контейнер выполняется, как исполняемый
-CMD в этом случае добавляется к концу Entrypoint как аргументы, а не заменяет entrypoint
-ENTRYPOINT node app.js - запустится через шелл /bin/sh, что не нужно
-а ENTRIPOINT [“node”, “app.js”] запустится в своем собственном процессе без шелла
+**ENTRYPOINT** превращает контейнер в исполняемую программу с фиксированной командой. 
+**CMD** при этом становится набором аргументов по умолчанию, которые можно легко переопределить.
+Когда вы используете ENTRYPOINT и CMD одновременно: 
+- ENTRYPOINT — это основная команда (которая всегда выполняется) 
+- CMD — это аргументы к этой команде (которые можно изменить при запуске) 
+**Пример:** 
+```dockerfile 
+ENTRYPOINT ["node"] 
+CMD ["app.js"]
+```
 
-```Shell
+Результат: `node app.js` 
+Но можно запустить контейнер с другим файлом: ```bash docker run mycontainer server.js ``` 
+Результат: `node server.js` (CMD заменился на `server.js`) 
+
+**2 формы записи:**
+1. Shell-форма
+```dockerfile 
+ENTRYPOINT node app.js 
+``` 
+- Запускается через оболочку `/bin/sh -c "node app.js"` 
+- Создаёт дополнительный процесс-обёртку 
+- Медленнее и сложнее управлять 
+
+2. Exec-форма (рекомендуется) 
+```dockerfile 
+ENTRYPOINT ["node", "app.js"] 
+```
+ - Запускается напрямую, без оболочки 
+ - Node.js становится главным процессом (PID 1) 
+ - Быстрее и корректнее обрабатывает сигналы остановки
+
+
+```dockerfile
 FROM debian:wheezy
 ENTRYPOINT ["/bin/ping"]
 CMD ["localhost"]
-
+```
+```shell
 docker run -it test  - будет пинговать localhost
 docker run -it test google.com  - будет пинговать google.com 
 ```
 
   
-
 **Multi-stage builds**
 При сборке приложения внутри контейнера нет смысла таскать с собой все ассеты для сборки: исходники, SDK, npm пакеты и так далее. Лучше использовать один образ как билд-машину с SDK, копировать сборку в другой образ с рантаймом и там запускать.
 
@@ -253,24 +299,22 @@ docker container stats <name> - стрим ресурсов в контейне�
 
 Если используется микросервисная архитектура, то удобно описывать все сервисы (контейнеры) в одном файле - docker-compose.yaml
 
-Docker compose - это софт, который нужно ставить отдельно, он не идет с докером.
+Docker compose - это скрипт, который раньше нужно было ставить отдельно и запускать как ```docker-compose <какая-то команда>```, но сейчас он идет вместе с docker и запускается, как его часть (без дефиса): ```docker compose <какая-то команда>```. Compose нужно запускать в той папке, где лежит docker-compose.yaml/yml файл.
 
-```Shell
-docker-compose up (-d - detached) - создать и поднять контейнеры
+```shell
+docker compose up (-d - detached) - создать и поднять контейнеры
 
-docker-compose ps - список контейнеров, созданных docker-compose
+docker compose ps - список контейнеров, созданных docker-compose
 
-docker-compose stop
+docker compose stop
 
-docker-compose start
+docker compose start
 
-docker-compose restart
+docker compose restart
 
-docker-compose down - удалить контейнеры, которые создал docker-compose
+docker compose down - удалить контейнеры, которые создал docker-compose
 
-docker-compose up --build --force-recreate - пересобрать образы
-
-docker-compose нужно запускать в той папке, где лежит docker-compose.yaml/yml файл.
+docker compose up --build --force-recreate - пересобрать образы
 ```
 
 **Бонус**
@@ -284,24 +328,6 @@ docker system prune - очистить все, что можно
 **Не бонус**
 
 Нативный докер, который поддерживает все фичи, и не жрет проц, есть только на линуксе. На винде и маке он будет работать через виртуалку.
-
-Пример **DockerFile**
-
-```Docker
-# Set the base image as the .NET 6.0 SDK (this includes the runtime)
-FROM mcr.microsoft.com/dotnet/sdk:6.0 as build-env
-
-# Copy everything and publish the release (publish implicitly restores and builds)
-WORKDIR /app
-COPY . ./
-RUN dotnet publish ./Service/Service.csproj -c Release -o out --no-self-contained
-
-# Relayer the .NET SDK, anew with the build output
-FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine
-WORKDIR /app
-COPY --from=build-env /app/out .
-ENTRYPOINT [ "dotnet", "Service.dll" ]
-```
 
 Пример **docker-compose.yml**
 
