@@ -14,6 +14,7 @@ Backend
 - [[Docker]]
 - [[HTTPS]]
 - [[gRPC и RPC]]
+- [[Result pattern vs Exception]]
 
 ASP.Net
 - [[Middleware]]
